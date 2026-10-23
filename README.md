@@ -66,7 +66,7 @@ ShopLite/
 - [x] Module 1: Repo and Git setup
 - [x] Module 2: User Service
 - [x] Module 3: Product Service
-- [ ] Module 4: Order Service
+- [x] Module 4: Order Service
 - [ ] Module 5: Tests
 - [ ] Module 6: Dockerize
 - [ ] Module 7: Docker Compose
@@ -162,6 +162,23 @@ creating, updating, and changing stock require a Bearer JWT signed with the
 same `JWT_SECRET` used by the User Service. Stock can be set with
 `{ "stock": 10 }` or reduced atomically with `{ "quantity": 2 }`.
 
+## Order Service
+
+The Order Service is in `services/order-service`. Copy `.env.example` to
+`.env`, start MongoDB and the Product Service, and run:
+
+```powershell
+cd services/order-service
+npm install
+npm start
+```
+
+It listens on port `3003` by default. `POST /orders` verifies the caller's JWT,
+gets the product price, asks Product Service to atomically reduce stock, and
+saves the order. Product Service failures return `404` for a missing product,
+`409` for insufficient stock, and `503` for an unavailable or timed-out
+Product Service.
+
 ## Next step
 
-Module 4 will implement the Order Service and its calls to Product Service.
+Module 5 will add the complete cross-service test and linting workflow.
