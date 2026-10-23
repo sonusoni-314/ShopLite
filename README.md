@@ -68,7 +68,7 @@ ShopLite/
 - [x] Module 3: Product Service
 - [x] Module 4: Order Service
 - [x] Module 5: Tests
-- [ ] Module 6: Dockerize
+- [x] Module 6: Dockerize
 - [ ] Module 7: Docker Compose
 - [ ] Module 8: GitHub Actions CI
 - [ ] Module 9: Push images to GHCR
@@ -205,6 +205,33 @@ npm test
 npm run lint
 ```
 
+## Docker
+
+Each service has a multi-stage production Dockerfile. The runtime image
+contains only production dependencies and application source, runs as the
+non-root `node` user, exposes its service port, and includes a Docker health
+check for `/health`.
+
+Build the images independently:
+
+```powershell
+docker build -t shoplite/user-service:local services/user-service
+docker build -t shoplite/product-service:local services/product-service
+docker build -t shoplite/order-service:local services/order-service
+```
+
+Run an individual image with its service-specific `.env` file:
+
+```powershell
+docker run --rm --name shoplite-user-service `
+  -p 3001:3001 `
+  --env-file services/user-service/.env `
+  shoplite/user-service:local
+```
+
+The service also needs a reachable MongoDB instance. The complete MongoDB,
+three-service, and gateway setup is added in Module 7.
+
 ## Next step
 
-Module 6 will add production Dockerfiles and `.dockerignore` files.
+Module 7 will add Docker Compose, MongoDB, and the NGINX gateway.
