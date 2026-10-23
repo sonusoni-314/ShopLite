@@ -70,7 +70,7 @@ ShopLite/
 - [x] Module 5: Tests
 - [x] Module 6: Dockerize
 - [x] Module 7: Docker Compose
-- [ ] Module 8: GitHub Actions CI
+- [x] Module 8: GitHub Actions CI
 - [ ] Module 9: Push images to GHCR
 - [ ] Module 10: Kubernetes manifests
 - [ ] Module 11: Deploy from the pipeline
@@ -262,6 +262,19 @@ Invoke-RestMethod http://localhost:8080/api/products/health
 Invoke-RestMethod http://localhost:8080/api/orders/health
 ```
 
+## GitHub Actions CI
+
+Module 8 adds one pull-request workflow per service:
+
+- `.github/workflows/user-service.yml`
+- `.github/workflows/product-service.yml`
+- `.github/workflows/order-service.yml`
+
+Each workflow runs only when its service or workflow file changes. It checks
+out the repository, sets up Node.js 20, runs `npm ci`, lint, tests, and builds
+the service Docker image. Configure these three workflow checks as required
+status checks for protected `main` after they have run on GitHub once.
+
 ## Next step
 
-Module 8 will add per-service GitHub Actions CI workflows.
+Module 9 will publish service images to GHCR after merges to `main`.
