@@ -67,10 +67,19 @@ jobs:
       - name: Install NGINX Ingress Controller
         run: |
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.5/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
-            --timeout=180s
+          if ! kubectl rollout status deployment/ingress-nginx-controller \
+            --namespace ingress-nginx \
+            --timeout=300s; then
+            kubectl get pods --namespace ingress-nginx -o wide
+            kubectl describe deployment/ingress-nginx-controller --namespace ingress-nginx
+            kubectl describe pods --namespace ingress-nginx \
+              --selector=app.kubernetes.io/component=controller
+            kubectl logs deployment/ingress-nginx-controller \
+              --namespace ingress-nginx \
+              --all-containers=true \
+              --tail=200
+            exit 1
+          fi
 
       - name: Configure manifest image owner
         run: sed -i "s|ghcr.io/OWNER|ghcr.io/${IMAGE_OWNER}|g" k8s/*.yaml
