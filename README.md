@@ -64,7 +64,7 @@ ShopLite/
 ## Module progress
 
 - [x] Module 1: Repo and Git setup
-- [ ] Module 2: User Service
+- [x] Module 2: User Service
 - [ ] Module 3: Product Service
 - [ ] Module 4: Order Service
 - [ ] Module 5: Tests
@@ -132,8 +132,21 @@ The local repository cannot enforce GitHub-hosted branch protection by itself.
 | product-service | `GET /products`, `GET /products/:id`, `POST /products`, `PUT /products/:id`, `PATCH /products/:id/stock`, `GET /health` |
 | order-service | `POST /orders`, `GET /orders`, `GET /orders/:id`, `GET /health` |
 
+## User Service
+
+The User Service is in `services/user-service`. Copy `.env.example` to `.env`,
+start a local MongoDB instance, and run:
+
+```powershell
+cd services/user-service
+npm install
+npm start
+```
+
+It listens on port `3001` by default and exposes registration, login, the
+authenticated `/users/me` route, and `/health`.
+
 ## Next step
 
-Module 2 will implement the User Service with local MongoDB support, password
-hashing, JWT creation, authentication middleware, and tests.
-
+Module 3 will implement the Product Service with catalog CRUD, stock
+management, and shared JWT verification.
