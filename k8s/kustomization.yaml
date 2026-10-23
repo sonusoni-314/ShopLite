@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: shoplite
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - mongodb.yaml
+  - user-service.yaml
+  - product-service.yaml
+  - order-service.yaml
+  - ingress.yaml
+

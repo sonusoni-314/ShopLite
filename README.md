@@ -72,8 +72,8 @@ ShopLite/
 - [x] Module 7: Docker Compose
 - [x] Module 8: GitHub Actions CI
 - [x] Module 9: Push images to GHCR
-- [ ] Module 10: Kubernetes manifests
-- [ ] Module 11: Deploy from the pipeline
+- [x] Module 10: Kubernetes manifests
+- [x] Module 11: Deploy from the pipeline
 - [ ] Module 12: Polish
 
 ## Module 1: Repository setup
@@ -296,6 +296,51 @@ The commit SHA tag makes every published image traceable and supports future
 rollback workflows. The package must be made public in GitHub Packages if a
 cluster will pull it without registry credentials.
 
+## Kubernetes
+
+The `k8s/` directory contains a namespace, ConfigMap, placeholder Secret,
+MongoDB Deployment and persistent volume claim, two-replica Deployments and
+ClusterIP Services for every application service, and an NGINX Ingress.
+
+Before a hand deployment, replace the placeholder values in
+`k8s/secret.yaml` and replace `OWNER` in the three service manifests with the
+GitHub Container Registry owner:
+
+```powershell
+kind create cluster --name shoplite
+kubectl apply -f k8s/namespace.yaml
+kubectl create secret docker-registry ghcr-pull -n shoplite `
+  --docker-server=ghcr.io `
+  --docker-username=<github-username> `
+  --docker-password=<github-token> `
+  --docker-email=<email>
+kubectl apply -k k8s/
+kubectl get pods -n shoplite
+```
+
+The `ghcr-pull` secret is required when GHCR packages are private. The
+deployment workflow creates it automatically from `GITHUB_TOKEN`.
+
+Install the NGINX Ingress Controller before applying `k8s/ingress.yaml`. Every
+application Deployment has `/health` readiness and liveness probes plus CPU
+and memory requests and limits. MongoDB uses a `PersistentVolumeClaim`.
+
+## Kubernetes deployment pipeline
+
+The [deploy-kind.yml](C:/Users/sonus/Downloads/ShopLite/.github/workflows/deploy-kind.yml)
+workflow runs on changes to services, Kubernetes manifests, or itself after
+merge to `main`. It logs in to GHCR with `GITHUB_TOKEN`, builds and pushes all
+three SHA/latest images, creates a kind cluster, installs the NGINX Ingress
+Controller, applies the manifests, updates Deployments to the immutable SHA
+images, waits for rollouts, and smoke-tests `/health` through a port-forward.
+
+For a rollback demonstration:
+
+```powershell
+kubectl rollout undo deployment/user-service -n shoplite
+kubectl rollout status deployment/user-service -n shoplite
+```
+
 ## Next step
 
-Module 10 will add Kubernetes manifests and health/resource configuration.
+Module 12 will polish the README, architecture documentation, and API examples.

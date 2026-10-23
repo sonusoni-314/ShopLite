@@ -1,0 +1,119 @@
+name: Deploy ShopLite to kind
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/**"
+      - "k8s/**"
+      - ".github/workflows/deploy-kind.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  deploy:
+    name: Build, deploy, and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push User Service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/user-service
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/shoplite-user-service:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/shoplite-user-service:latest
+
+      - name: Build and push Product Service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/product-service
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/shoplite-product-service:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/shoplite-product-service:latest
+
+      - name: Build and push Order Service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/order-service
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/shoplite-order-service:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/shoplite-order-service:latest
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: shoplite
+
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.5/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=180s
+
+      - name: Configure manifest image owner
+        run: sed -i "s|ghcr.io/OWNER|ghcr.io/${IMAGE_OWNER}|g" k8s/*.yaml
+
+      - name: Create GHCR pull secret
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl -n shoplite create secret docker-registry ghcr-pull \
+            --docker-server=ghcr.io \
+            --docker-username="${{ github.actor }}" \
+            --docker-password="${{ secrets.GITHUB_TOKEN }}" \
+            --docker-email="${{ github.actor }}@users.noreply.github.com" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -k k8s/
+
+      - name: Set immutable image tags
+        run: |
+          kubectl -n shoplite set image deployment/user-service \
+            user-service=ghcr.io/${IMAGE_OWNER}/shoplite-user-service:${{ github.sha }}
+          kubectl -n shoplite set image deployment/product-service \
+            product-service=ghcr.io/${IMAGE_OWNER}/shoplite-product-service:${{ github.sha }}
+          kubectl -n shoplite set image deployment/order-service \
+            order-service=ghcr.io/${IMAGE_OWNER}/shoplite-order-service:${{ github.sha }}
+
+      - name: Wait for rollouts
+        run: |
+          kubectl -n shoplite rollout status deployment/mongodb --timeout=180s
+          kubectl -n shoplite rollout status deployment/user-service --timeout=180s
+          kubectl -n shoplite rollout status deployment/product-service --timeout=180s
+          kubectl -n shoplite rollout status deployment/order-service --timeout=180s
+
+      - name: Smoke test User Service health
+        run: |
+          kubectl -n shoplite port-forward service/user-service 18081:3001 > /tmp/shoplite-port-forward.log 2>&1 &
+          PORT_FORWARD_PID=$!
+          trap 'kill "$PORT_FORWARD_PID"' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18081/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/shoplite-port-forward.log
+          exit 1
