@@ -1,0 +1,11 @@
+{
+  "name": "shoplite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShopLite microservices application",
+  "scripts": {
+    "test": "npm --prefix services/user-service test && npm --prefix services/product-service test && npm --prefix services/order-service test",
+    "lint": "npm --prefix services/user-service run lint && npm --prefix services/product-service run lint && npm --prefix services/order-service run lint"
+  }
+}
+

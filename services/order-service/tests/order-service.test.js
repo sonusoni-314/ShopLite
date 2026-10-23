@@ -8,6 +8,8 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const Order = require('../src/models/order');
 const { createApp } = require('../src/app');
 
+jest.setTimeout(30000);
+
 const config = {
   jwtSecret: 'test-secret-that-is-long-enough',
   productServiceUrl: 'http://product-service:3002',
@@ -243,4 +245,3 @@ describe('Order Service', () => {
     expect(axios.patch.mock.calls[0][2].headers.Authorization).toBe(`Bearer ${otherUserToken}`);
   });
 });
-

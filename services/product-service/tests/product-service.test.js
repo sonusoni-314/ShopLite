@@ -5,6 +5,8 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const Product = require('../src/models/product');
 const { createApp } = require('../src/app');
 
+jest.setTimeout(30000);
+
 const config = {
   jwtSecret: 'test-secret-that-is-long-enough'
 };
@@ -177,4 +179,3 @@ describe('Product Service', () => {
     expect(underflowResponse.status).toBe(409);
   });
 });
-

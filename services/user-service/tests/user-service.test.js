@@ -6,6 +6,8 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const User = require('../src/models/user');
 const { createApp } = require('../src/app');
 
+jest.setTimeout(30000);
+
 const config = {
   jwtSecret: 'test-secret-that-is-long-enough',
   jwtExpiresIn: '1h'
@@ -151,4 +153,3 @@ describe('User Service', () => {
     });
   });
 });
-

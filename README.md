@@ -67,7 +67,7 @@ ShopLite/
 - [x] Module 2: User Service
 - [x] Module 3: Product Service
 - [x] Module 4: Order Service
-- [ ] Module 5: Tests
+- [x] Module 5: Tests
 - [ ] Module 6: Dockerize
 - [ ] Module 7: Docker Compose
 - [ ] Module 8: GitHub Actions CI
@@ -179,6 +179,32 @@ saves the order. Product Service failures return `404` for a missing product,
 `409` for insufficient stock, and `503` for an unavailable or timed-out
 Product Service.
 
+## Testing and linting
+
+Each service has its own Jest, Supertest, MongoDB Memory Server, and ESLint
+configuration. The Order Service mocks Axios so its tests never require a
+running Product Service.
+
+Run every service test suite from the repository root:
+
+```powershell
+npm test
+```
+
+Run linting for every service from the repository root:
+
+```powershell
+npm run lint
+```
+
+You can also run a single service independently:
+
+```powershell
+cd services/user-service
+npm test
+npm run lint
+```
+
 ## Next step
 
-Module 5 will add the complete cross-service test and linting workflow.
+Module 6 will add production Dockerfiles and `.dockerignore` files.
