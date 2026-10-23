@@ -69,7 +69,7 @@ ShopLite/
 - [x] Module 4: Order Service
 - [x] Module 5: Tests
 - [x] Module 6: Dockerize
-- [ ] Module 7: Docker Compose
+- [x] Module 7: Docker Compose
 - [ ] Module 8: GitHub Actions CI
 - [ ] Module 9: Push images to GHCR
 - [ ] Module 10: Kubernetes manifests
@@ -232,6 +232,36 @@ docker run --rm --name shoplite-user-service `
 The service also needs a reachable MongoDB instance. The complete MongoDB,
 three-service, and gateway setup is added in Module 7.
 
+## Docker Compose
+
+Module 7 runs MongoDB, all three services, and the NGINX gateway on one
+Compose network. Only the gateway publishes a host port:
+
+```powershell
+docker compose up --build
+```
+
+The gateway is available at `http://localhost:8080`. It routes:
+
+| Gateway path | Internal service |
+| --- | --- |
+| `/api/users/*` | `user-service:3001` |
+| `/api/products/*` | `product-service:3002` |
+| `/api/orders/*` | `order-service:3003` |
+
+Compose stores MongoDB data in the named `mongo-data` volume. The services
+wait for MongoDB and their required dependencies to become healthy before
+starting. For local development, Compose uses a development JWT secret by
+default; set `JWT_SECRET` in the environment to override it.
+
+Example gateway checks:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/users/health
+Invoke-RestMethod http://localhost:8080/api/products/health
+Invoke-RestMethod http://localhost:8080/api/orders/health
+```
+
 ## Next step
 
-Module 7 will add Docker Compose, MongoDB, and the NGINX gateway.
+Module 8 will add per-service GitHub Actions CI workflows.
