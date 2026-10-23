@@ -71,7 +71,7 @@ ShopLite/
 - [x] Module 6: Dockerize
 - [x] Module 7: Docker Compose
 - [x] Module 8: GitHub Actions CI
-- [ ] Module 9: Push images to GHCR
+- [x] Module 9: Push images to GHCR
 - [ ] Module 10: Kubernetes manifests
 - [ ] Module 11: Deploy from the pipeline
 - [ ] Module 12: Polish
@@ -275,6 +275,27 @@ out the repository, sets up Node.js 20, runs `npm ci`, lint, tests, and builds
 the service Docker image. Configure these three workflow checks as required
 status checks for protected `main` after they have run on GitHub once.
 
+## GitHub Container Registry
+
+Module 9 adds one image-publishing workflow per service:
+
+- `.github/workflows/publish-user-service.yml`
+- `.github/workflows/publish-product-service.yml`
+- `.github/workflows/publish-order-service.yml`
+
+After a service change is merged to `main`, its workflow logs in to GHCR with
+the automatically provided `GITHUB_TOKEN`, builds the service image, and
+publishes two tags:
+
+```text
+ghcr.io/<owner>/shoplite-<service>:<commit-sha>
+ghcr.io/<owner>/shoplite-<service>:latest
+```
+
+The commit SHA tag makes every published image traceable and supports future
+rollback workflows. The package must be made public in GitHub Packages if a
+cluster will pull it without registry credentials.
+
 ## Next step
 
-Module 9 will publish service images to GHCR after merges to `main`.
+Module 10 will add Kubernetes manifests and health/resource configuration.
