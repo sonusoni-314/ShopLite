@@ -65,7 +65,7 @@ ShopLite/
 
 - [x] Module 1: Repo and Git setup
 - [x] Module 2: User Service
-- [ ] Module 3: Product Service
+- [x] Module 3: Product Service
 - [ ] Module 4: Order Service
 - [ ] Module 5: Tests
 - [ ] Module 6: Dockerize
@@ -146,7 +146,22 @@ npm start
 It listens on port `3001` by default and exposes registration, login, the
 authenticated `/users/me` route, and `/health`.
 
+## Product Service
+
+The Product Service is in `services/product-service`. Copy `.env.example` to
+`.env`, start a local MongoDB instance, and run:
+
+```powershell
+cd services/product-service
+npm install
+npm start
+```
+
+It listens on port `3002` by default. Product listing and retrieval are public;
+creating, updating, and changing stock require a Bearer JWT signed with the
+same `JWT_SECRET` used by the User Service. Stock can be set with
+`{ "stock": 10 }` or reduced atomically with `{ "quantity": 2 }`.
+
 ## Next step
 
-Module 3 will implement the Product Service with catalog CRUD, stock
-management, and shared JWT verification.
+Module 4 will implement the Order Service and its calls to Product Service.
