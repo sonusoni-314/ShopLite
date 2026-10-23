@@ -251,8 +251,8 @@ The gateway is available at `http://localhost:8080`. It routes:
 
 Compose stores MongoDB data in the named `mongo-data` volume. The services
 wait for MongoDB and their required dependencies to become healthy before
-starting. For local development, Compose uses a development JWT secret by
-default; set `JWT_SECRET` in the environment to override it.
+starting. Compose requires `JWT_SECRET` to be set explicitly in the root `.env` file or
+the shell environment. It has no insecure default.
 
 Example gateway checks:
 
@@ -298,28 +298,35 @@ cluster will pull it without registry credentials.
 
 ## Kubernetes
 
-The `k8s/` directory contains a namespace, ConfigMap, placeholder Secret,
+The `k8s/` directory contains a namespace, ConfigMap, runtime-created Secret,
 MongoDB Deployment and persistent volume claim, two-replica Deployments and
 ClusterIP Services for every application service, and an NGINX Ingress.
 
-Before a hand deployment, replace the placeholder values in
-`k8s/secret.yaml` and replace `OWNER` in the three service manifests with the
-GitHub Container Registry owner:
+Before a hand deployment, replace `OWNER` in the three service manifests with
+the GitHub Container Registry owner and create the application Secret without
+committing it:
 
 ```powershell
 kind create cluster --name shoplite
 kubectl apply -f k8s/namespace.yaml
+$jwtSecret = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
 kubectl create secret docker-registry ghcr-pull -n shoplite `
   --docker-server=ghcr.io `
   --docker-username=<github-username> `
   --docker-password=<github-token> `
   --docker-email=<email>
+kubectl create secret generic shoplite-secrets -n shoplite `
+  --from-literal=JWT_SECRET=$jwtSecret `
+  --from-literal=USER_MONGO_URI=mongodb://mongodb:27017/shoplite_users `
+  --from-literal=PRODUCT_MONGO_URI=mongodb://mongodb:27017/shoplite_products `
+  --from-literal=ORDER_MONGO_URI=mongodb://mongodb:27017/shoplite_orders
 kubectl apply -k k8s/
 kubectl get pods -n shoplite
 ```
 
 The `ghcr-pull` secret is required when GHCR packages are private. The
-deployment workflow creates it automatically from `GITHUB_TOKEN`.
+deployment workflow creates both runtime secrets automatically; neither is
+stored in Git.
 
 Install the NGINX Ingress Controller before applying `k8s/ingress.yaml`. Every
 application Deployment has `/health` readiness and liveness probes plus CPU

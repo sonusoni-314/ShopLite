@@ -85,6 +85,16 @@ jobs:
             --docker-email="${{ github.actor }}@users.noreply.github.com" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Create application secrets
+        run: |
+          JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
+          kubectl -n shoplite create secret generic shoplite-secrets \
+            --from-literal=JWT_SECRET="$JWT_SECRET" \
+            --from-literal=USER_MONGO_URI=mongodb://mongodb:27017/shoplite_users \
+            --from-literal=PRODUCT_MONGO_URI=mongodb://mongodb:27017/shoplite_products \
+            --from-literal=ORDER_MONGO_URI=mongodb://mongodb:27017/shoplite_orders \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Apply Kubernetes manifests
         run: kubectl apply -k k8s/
 

@@ -4,10 +4,8 @@ namespace: shoplite
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secret.yaml
   - mongodb.yaml
   - user-service.yaml
   - product-service.yaml
   - order-service.yaml
   - ingress.yaml
-

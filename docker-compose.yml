@@ -20,7 +20,7 @@ services:
     environment:
       PORT: 3001
       MONGO_URI: mongodb://mongo:27017/shoplite_users
-      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env or the shell}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
     depends_on:
       mongo:
@@ -41,7 +41,7 @@ services:
     environment:
       PORT: 3002
       MONGO_URI: mongodb://mongo:27017/shoplite_products
-      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env or the shell}
     depends_on:
       mongo:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
     environment:
       PORT: 3003
       MONGO_URI: mongodb://mongo:27017/shoplite_orders
-      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env or the shell}
       PRODUCT_SERVICE_URL: http://product-service:3002
       PRODUCT_SERVICE_TIMEOUT_MS: 5000
     depends_on:
@@ -101,4 +101,3 @@ volumes:
 networks:
   shoplite:
     driver: bridge
-
