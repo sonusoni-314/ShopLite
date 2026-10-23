@@ -1,10 +1,35 @@
 # ShopLite
 
-ShopLite is a backend e-commerce application built as three small Node.js
-microservices. It demonstrates JWT authentication, service-to-service HTTP
-communication, Docker, Kubernetes, and GitHub Actions CI/CD.
+![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-API-000000?logo=express&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-326CE5?logo=kubernetes&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-There is no frontend. Use curl or Postman to exercise the APIs.
+ShopLite is a production-oriented backend e-commerce demonstration built from
+three independently deployable Node.js microservices. It covers the complete
+path from application code to container images, automated tests, GitHub Actions,
+GitHub Container Registry, and Kubernetes deployment.
+
+The project has no browser frontend. Use the HTTP API through the NGINX gateway
+with `curl`, PowerShell, Postman, or another API client.
+
+## What the project does
+
+ShopLite provides:
+
+- User registration, login, password hashing, and JWT authentication.
+- A product catalog with CRUD operations and atomic stock reduction.
+- Authenticated order creation with price lookup and stock reservation.
+- HTTP communication from Order Service to Product Service.
+- Separate MongoDB databases for users, products, and orders.
+- A single NGINX entry point for local and containerized API access.
+- Automated testing, linting, image publishing, and Kubernetes smoke testing.
+
+When a customer creates an order, Order Service verifies the JWT, requests the
+product and price from Product Service, asks Product Service to reduce stock,
+and saves the order only after those operations succeed. Product failures are
+mapped to useful API responses such as `404`, `409`, and `503`.
 
 ## Architecture
 
@@ -12,249 +37,114 @@ There is no frontend. Use curl or Postman to exercise the APIs.
 Client
   |
   v
-NGINX Gateway
-  |-- /api/users    --> user-service
-  |-- /api/products --> product-service
-  |-- /api/orders   --> order-service
-                              |
-                              +-- HTTP --> product-service
-                              +-- MongoDB (orders database)
+NGINX Gateway :8080
+  |-- /api/users    --> User Service :3001 --> MongoDB (shoplite_users)
+  |-- /api/products --> Product Service :3002 --> MongoDB (shoplite_products)
+  `-- /api/orders   --> Order Service :3003
+                              |-- HTTP --> Product Service
+                              `-- MongoDB (shoplite_orders)
 ```
 
-The services use one MongoDB server with a separate database for each service.
-All services verify JWTs with the same `JWT_SECRET`.
+All services use the same `JWT_SECRET` to verify tokens. Services communicate
+by name on the Docker Compose network and by Kubernetes Service DNS in a
+cluster. Only the gateway is exposed to the host in the default Compose setup.
+
+## Project metrics
+
+| Area | Current implementation |
+| --- | --- |
+| Application services | 3 independently deployable services |
+| Public entry point | 1 NGINX gateway on port `8080` |
+| Automated tests | 35 Jest/Supertest tests |
+| Datastores | MongoDB with 3 service-specific databases |
+| Service replicas in Kubernetes | 2 per application service |
+| Container security | Multi-stage images running as non-root `node` |
+| CI workflows | 3 service-specific pull-request workflows |
+| Image publishing | 3 GHCR workflows with SHA and `latest` tags |
+| Deployment pipeline | 1 kind-based Kubernetes build/deploy/smoke-test workflow |
+| Health checks | Docker healthchecks and Kubernetes liveness/readiness probes |
+
+## Technology stack
+
+- **Runtime and API:** Node.js 20, Express
+- **Data:** MongoDB 7, Mongoose
+- **Security:** JWT, bcryptjs, shared authentication middleware
+- **Service communication:** Axios with timeout and forwarded authorization
+- **Quality:** Jest, Supertest, MongoDB Memory Server, ESLint
+- **Containers:** Docker, Docker Compose, NGINX
+- **Platform:** Kubernetes, kind, Kustomize, NGINX Ingress
+- **Automation:** GitHub Actions, GitHub Container Registry (GHCR)
 
 ## Repository structure
 
 ```text
 ShopLite/
 ├── services/
-│   ├── user-service/
-│   ├── product-service/
-│   └── order-service/
+│   ├── user-service/       # Registration, login, and identity
+│   ├── product-service/    # Catalog and inventory
+│   └── order-service/      # Orders and service-to-service flow
 ├── gateway/
-├── k8s/
-├── .github/
-│   └── workflows/
-├── .editorconfig
-├── .gitignore
+│   └── nginx.conf          # Public API routing
+├── k8s/                    # Kubernetes resources and Kustomize entry point
+├── .github/workflows/      # CI, image publishing, and deployment workflows
+├── docker-compose.yml      # Local multi-container environment
+├── package.json            # Root test and lint commands
 └── README.md
 ```
 
-## Services
+## Prerequisites
 
-| Service | Local port | Responsibility |
-| --- | ---: | --- |
-| user-service | 3001 | Registration, login, JWT authentication |
-| product-service | 3002 | Product catalog and stock |
-| order-service | 3003 | Orders and Product Service communication |
-| NGINX gateway | 8080 | Public API routing |
-
-## Technology
-
-- Node.js 20 and Express
-- MongoDB and Mongoose
-- JWT and bcrypt authentication
-- Axios for service-to-service requests
-- Jest, Supertest, and ESLint
-- Docker and Docker Compose
-- Kubernetes with kind or minikube
-- GitHub Actions and GitHub Container Registry
-
-## Module progress
-
-- [x] Module 1: Repo and Git setup
-- [x] Module 2: User Service
-- [x] Module 3: Product Service
-- [x] Module 4: Order Service
-- [x] Module 5: Tests
-- [x] Module 6: Dockerize
-- [x] Module 7: Docker Compose
-- [x] Module 8: GitHub Actions CI
-- [x] Module 9: Push images to GHCR
-- [x] Module 10: Kubernetes manifests
-- [x] Module 11: Deploy from the pipeline
-- [ ] Module 12: Polish
-
-## Module 1: Repository setup
-
-### Prerequisites
+For the recommended local workflow, install:
 
 - Git
-- Node.js 20
-- Docker
-- A GitHub account for the remote repository and pull requests
+- Node.js 20 or newer
+- Docker Desktop with the Linux engine running
+- PowerShell, Bash, or another shell
 
-### Git workflow
+For Kubernetes work, also install:
 
-Work is done on feature branches and merged through pull requests:
+- `kubectl`
+- `kind` (for local manual deployment)
 
-```powershell
-git switch main
-git pull
-git switch -c feature/<name>
-# make changes and verify them
-git add .
-git commit -m "feat: describe the change"
-git push -u origin feature/<name>
-# open a pull request, wait for checks, and merge
-git switch main
-git pull
-git branch -d feature/<name>
-```
+## Quick start with Docker Compose
 
-Use these commit prefixes:
+This is the easiest way to run the complete application locally.
 
-- `feat:` for a new feature
-- `fix:` for a bug fix
-- `chore:` for setup or tooling
-- `docs:` for documentation
-- `test:` for tests
-
-### GitHub branch protection
-
-After pushing this repository to GitHub, protect `main` in:
-`Settings` → `Branches` → `Add branch ruleset` (or branch protection rule).
-
-Enable:
-
-- Require a pull request before merging
-- Block force pushes
-- Require status checks once Module 8 workflows exist
-
-The local repository cannot enforce GitHub-hosted branch protection by itself.
-
-## Planned API routes
-
-| Service | Routes |
-| --- | --- |
-| user-service | `POST /users/register`, `POST /users/login`, `GET /users/me`, `GET /health` |
-| product-service | `GET /products`, `GET /products/:id`, `POST /products`, `PUT /products/:id`, `PATCH /products/:id/stock`, `GET /health` |
-| order-service | `POST /orders`, `GET /orders`, `GET /orders/:id`, `GET /health` |
-
-## User Service
-
-The User Service is in `services/user-service`. Copy `.env.example` to `.env`,
-start a local MongoDB instance, and run:
+### 1. Clone the repository
 
 ```powershell
-cd services/user-service
-npm install
-npm start
+git clone https://github.com/sonusoni-314/ShopLite.git
+cd ShopLite
 ```
 
-It listens on port `3001` by default and exposes registration, login, the
-authenticated `/users/me` route, and `/health`.
+### 2. Create a local secret
 
-## Product Service
-
-The Product Service is in `services/product-service`. Copy `.env.example` to
-`.env`, start a local MongoDB instance, and run:
+The Compose configuration intentionally has no insecure default JWT secret.
+Create a root `.env` file and keep it untracked:
 
 ```powershell
-cd services/product-service
-npm install
-npm start
+@"
+JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('base64'))")
+JWT_EXPIRES_IN=1h
+"@ | Set-Content .env
 ```
 
-It listens on port `3002` by default. Product listing and retrieval are public;
-creating, updating, and changing stock require a Bearer JWT signed with the
-same `JWT_SECRET` used by the User Service. Stock can be set with
-`{ "stock": 10 }` or reduced atomically with `{ "quantity": 2 }`.
+Never commit `.env`, access tokens, database credentials, or private keys.
+Use the provided `.env.example` files only as configuration templates.
 
-## Order Service
-
-The Order Service is in `services/order-service`. Copy `.env.example` to
-`.env`, start MongoDB and the Product Service, and run:
-
-```powershell
-cd services/order-service
-npm install
-npm start
-```
-
-It listens on port `3003` by default. `POST /orders` verifies the caller's JWT,
-gets the product price, asks Product Service to atomically reduce stock, and
-saves the order. Product Service failures return `404` for a missing product,
-`409` for insufficient stock, and `503` for an unavailable or timed-out
-Product Service.
-
-## Testing and linting
-
-Each service has its own Jest, Supertest, MongoDB Memory Server, and ESLint
-configuration. The Order Service mocks Axios so its tests never require a
-running Product Service.
-
-Run every service test suite from the repository root:
-
-```powershell
-npm test
-```
-
-Run linting for every service from the repository root:
-
-```powershell
-npm run lint
-```
-
-You can also run a single service independently:
-
-```powershell
-cd services/user-service
-npm test
-npm run lint
-```
-
-## Docker
-
-Each service has a multi-stage production Dockerfile. The runtime image
-contains only production dependencies and application source, runs as the
-non-root `node` user, exposes its service port, and includes a Docker health
-check for `/health`.
-
-Build the images independently:
-
-```powershell
-docker build -t shoplite/user-service:local services/user-service
-docker build -t shoplite/product-service:local services/product-service
-docker build -t shoplite/order-service:local services/order-service
-```
-
-Run an individual image with its service-specific `.env` file:
-
-```powershell
-docker run --rm --name shoplite-user-service `
-  -p 3001:3001 `
-  --env-file services/user-service/.env `
-  shoplite/user-service:local
-```
-
-The service also needs a reachable MongoDB instance. The complete MongoDB,
-three-service, and gateway setup is added in Module 7.
-
-## Docker Compose
-
-Module 7 runs MongoDB, all three services, and the NGINX gateway on one
-Compose network. Only the gateway publishes a host port:
+### 3. Build and start the stack
 
 ```powershell
 docker compose up --build
 ```
 
-The gateway is available at `http://localhost:8080`. It routes:
+The first startup may take a few minutes while images build and MongoDB
+initializes. Compose waits for required healthchecks before starting dependent
+services.
 
-| Gateway path | Internal service |
-| --- | --- |
-| `/api/users/*` | `user-service:3001` |
-| `/api/products/*` | `product-service:3002` |
-| `/api/orders/*` | `order-service:3003` |
+### 4. Verify the gateway
 
-Compose stores MongoDB data in the named `mongo-data` volume. The services
-wait for MongoDB and their required dependencies to become healthy before
-starting. Compose requires `JWT_SECRET` to be set explicitly in the root `.env` file or
-the shell environment. It has no insecure default.
-
-Example gateway checks:
+Open a second terminal and run:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/api/users/health
@@ -262,92 +152,256 @@ Invoke-RestMethod http://localhost:8080/api/products/health
 Invoke-RestMethod http://localhost:8080/api/orders/health
 ```
 
-## GitHub Actions CI
+The expected response from each health endpoint is a successful JSON response.
+The root URL (`http://localhost:8080/`) intentionally has no frontend route and
+may return an NGINX `404`.
 
-Module 8 adds one pull-request workflow per service:
+### 5. Stop the stack
+
+```powershell
+docker compose down
+```
+
+Add `-v` only when you intentionally want to remove the named MongoDB volume:
+
+```powershell
+docker compose down -v
+```
+
+## API reference
+
+All examples below use the gateway base URL:
+
+```text
+http://localhost:8080
+```
+
+| Service | Method | Route | Authentication |
+| --- | --- | --- | --- |
+| Users | `POST` | `/api/users/register` | Public |
+| Users | `POST` | `/api/users/login` | Public |
+| Users | `GET` | `/api/users/me` | Bearer JWT |
+| Users | `GET` | `/api/users/health` | Public |
+| Products | `GET` | `/api/products` | Public |
+| Products | `GET` | `/api/products/:id` | Public |
+| Products | `POST` | `/api/products` | Bearer JWT |
+| Products | `PUT` | `/api/products/:id` | Bearer JWT |
+| Products | `PATCH` | `/api/products/:id/stock` | Bearer JWT |
+| Products | `GET` | `/api/products/health` | Public |
+| Orders | `POST` | `/api/orders` | Bearer JWT |
+| Orders | `GET` | `/api/orders` | Bearer JWT |
+| Orders | `GET` | `/api/orders/:id` | Bearer JWT |
+| Orders | `GET` | `/api/orders/health` | Public |
+
+### Example API flow
+
+Register and log in:
+
+```powershell
+$base = "http://localhost:8080"
+
+$register = @{
+  name = "Demo User"
+  email = "demo@example.com"
+  password = "Password123!"
+} | ConvertTo-Json
+
+Invoke-RestMethod "$base/api/users/register" `
+  -Method Post -ContentType "application/json" -Body $register
+
+$login = Invoke-RestMethod "$base/api/users/login" `
+  -Method Post -ContentType "application/json" -Body $register
+
+$headers = @{ Authorization = "Bearer $($login.token)" }
+```
+
+Create a product and place an order:
+
+```powershell
+$product = @{
+  name = "Mechanical Keyboard"
+  description = "Compact wireless keyboard"
+  price = 79.99
+  stock = 10
+} | ConvertTo-Json
+
+$created = Invoke-RestMethod "$base/api/products" `
+  -Method Post -Headers $headers `
+  -ContentType "application/json" -Body $product
+
+$order = @{ items = @(@{ productId = $created._id; quantity = 1 }) } |
+  ConvertTo-Json -Depth 5
+
+Invoke-RestMethod "$base/api/orders" `
+  -Method Post -Headers $headers `
+  -ContentType "application/json" -Body $order
+```
+
+## Development and validation
+
+The root scripts run all service checks:
+
+```powershell
+npm install
+npm test
+npm run lint
+```
+
+The test suites cover authentication, protected routes, product CRUD,
+inventory behavior, order ownership, Product Service failures, timeouts, and
+JWT forwarding. Order Service tests mock Axios, so they do not require a
+running Product Service.
+
+To work on one service:
+
+```powershell
+cd services/user-service
+npm ci
+npm test
+npm run lint
+```
+
+The same pattern applies to `product-service` and `order-service`.
+
+## Docker images
+
+Each service has a multi-stage Dockerfile that installs production
+dependencies in the runtime stage, runs as the non-root `node` user, exposes
+the service port, and defines a `/health` check.
+
+Build images independently:
+
+```powershell
+docker build -t shoplite/user-service:local services/user-service
+docker build -t shoplite/product-service:local services/product-service
+docker build -t shoplite/order-service:local services/order-service
+```
+
+## CI/CD workflow
+
+### Pull request CI
+
+The three service workflows run when their service changes:
 
 - `.github/workflows/user-service.yml`
 - `.github/workflows/product-service.yml`
 - `.github/workflows/order-service.yml`
 
-Each workflow runs only when its service or workflow file changes. It checks
-out the repository, sets up Node.js 20, runs `npm ci`, lint, tests, and builds
-the service Docker image. Configure these three workflow checks as required
-status checks for protected `main` after they have run on GitHub once.
+Each workflow checks out the code, installs Node.js dependencies with `npm ci`,
+runs linting and tests, and builds the service Docker image. Configure these
+checks as required status checks for protected `main`.
 
-## GitHub Container Registry
+### Image publishing
 
-Module 9 adds one image-publishing workflow per service:
-
-- `.github/workflows/publish-user-service.yml`
-- `.github/workflows/publish-product-service.yml`
-- `.github/workflows/publish-order-service.yml`
-
-After a service change is merged to `main`, its workflow logs in to GHCR with
-the automatically provided `GITHUB_TOKEN`, builds the service image, and
-publishes two tags:
+After a service change reaches `main`, the corresponding publishing workflow
+builds and pushes two GHCR tags:
 
 ```text
-ghcr.io/<owner>/shoplite-<service>:<commit-sha>
-ghcr.io/<owner>/shoplite-<service>:latest
+ghcr.io/sonusoni-314/shoplite-<service>:<commit-sha>
+ghcr.io/sonusoni-314/shoplite-<service>:latest
 ```
 
-The commit SHA tag makes every published image traceable and supports future
-rollback workflows. The package must be made public in GitHub Packages if a
-cluster will pull it without registry credentials.
+The immutable commit-SHA tag makes each deployment traceable and allows a
+specific version to be selected during a rollback. Publishing authenticates
+with the repository-provided `GITHUB_TOKEN`; no registry password is stored in
+the repository.
 
-## Kubernetes
+### Kubernetes deployment
 
-The `k8s/` directory contains a namespace, ConfigMap, runtime-created Secret,
-MongoDB Deployment and persistent volume claim, two-replica Deployments and
-ClusterIP Services for every application service, and an NGINX Ingress.
+The deployment workflow
+([`deploy-kind.yml`](.github/workflows/deploy-kind.yml)) runs on relevant
+changes merged to `main` and:
 
-Before a hand deployment, replace `OWNER` in the three service manifests with
-the GitHub Container Registry owner and create the application Secret without
-committing it:
+1. Builds and pushes all three service images.
+2. Creates a temporary kind cluster.
+3. Installs the NGINX Ingress Controller.
+4. Creates runtime-only GHCR and application secrets.
+5. Applies the Kustomize manifests.
+6. Sets Deployments to the immutable commit-SHA images.
+7. Waits for MongoDB and application rollouts.
+8. Port-forwards User Service and smoke-tests `/health`.
+
+The successful deployment run is available in
+[GitHub Actions](https://github.com/sonusoni-314/ShopLite/actions).
+The kind cluster exists only for the duration of the GitHub-hosted job; GHCR
+images remain available after the job ends.
+
+## Kubernetes manifests
+
+The `k8s/` directory defines:
+
+- A dedicated `shoplite` namespace.
+- ConfigMap-based non-secret configuration.
+- Runtime-created Secret values for JWT and MongoDB URIs.
+- MongoDB Deployment, Service, and PersistentVolumeClaim.
+- Two-replica Deployments and ClusterIP Services for each application service.
+- CPU and memory requests/limits.
+- Liveness and readiness probes on `/health`.
+- NGINX Ingress routes for users, products, and orders.
+
+For a manual deployment, install the NGINX Ingress Controller first, replace
+the `OWNER` placeholders in the service manifests, create the runtime secrets,
+and then run:
 
 ```powershell
-kind create cluster --name shoplite
-kubectl apply -f k8s/namespace.yaml
-$jwtSecret = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
-kubectl create secret docker-registry ghcr-pull -n shoplite `
-  --docker-server=ghcr.io `
-  --docker-username=<github-username> `
-  --docker-password=<github-token> `
-  --docker-email=<email>
-kubectl create secret generic shoplite-secrets -n shoplite `
-  --from-literal=JWT_SECRET=$jwtSecret `
-  --from-literal=USER_MONGO_URI=mongodb://mongodb:27017/shoplite_users `
-  --from-literal=PRODUCT_MONGO_URI=mongodb://mongodb:27017/shoplite_products `
-  --from-literal=ORDER_MONGO_URI=mongodb://mongodb:27017/shoplite_orders
 kubectl apply -k k8s/
 kubectl get pods -n shoplite
+kubectl get ingress -n shoplite
 ```
 
-The `ghcr-pull` secret is required when GHCR packages are private. The
-deployment workflow creates both runtime secrets automatically; neither is
-stored in Git.
+Do not commit generated Kubernetes secrets. The automated workflow creates them
+at runtime.
 
-Install the NGINX Ingress Controller before applying `k8s/ingress.yaml`. Every
-application Deployment has `/health` readiness and liveness probes plus CPU
-and memory requests and limits. MongoDB uses a `PersistentVolumeClaim`.
+## Git workflow and security
 
-## Kubernetes deployment pipeline
-
-The [deploy-kind.yml](C:/Users/sonus/Downloads/ShopLite/.github/workflows/deploy-kind.yml)
-workflow runs on changes to services, Kubernetes manifests, or itself after
-merge to `main`. It logs in to GHCR with `GITHUB_TOKEN`, builds and pushes all
-three SHA/latest images, creates a kind cluster, installs the NGINX Ingress
-Controller, applies the manifests, updates Deployments to the immutable SHA
-images, waits for rollouts, and smoke-tests `/health` through a port-forward.
-
-For a rollback demonstration:
+Use feature branches and pull requests instead of committing directly to
+`main`:
 
 ```powershell
-kubectl rollout undo deployment/user-service -n shoplite
-kubectl rollout status deployment/user-service -n shoplite
+git switch main
+git pull
+git switch -c feature/<name>
+# make and validate changes
+git add .
+git commit -m "feat: describe the change"
+git push -u origin feature/<name>
 ```
 
-## Next step
+Protect `main` in GitHub repository settings by requiring pull requests,
+successful service CI checks, and blocking force pushes. The local repository
+cannot enforce GitHub branch protection by itself.
 
-Module 12 will polish the README, architecture documentation, and API examples.
+Security practices included in this project:
+
+- Secrets are excluded by `.gitignore`.
+- Compose requires an explicitly supplied `JWT_SECRET`.
+- Kubernetes JWT and registry secrets are generated at runtime.
+- Images run as a non-root user.
+- Service-to-service requests have a timeout.
+- Authentication is required for user, product-management, and order routes.
+
+## Future improvements
+
+1. **Production observability:** add structured JSON logs, request correlation
+   IDs, Prometheus metrics, and centralized dashboards for latency, errors, and
+   inventory operations.
+2. **Production deployment and resilience:** move from the temporary kind
+   demonstration to a managed or k3s cluster, add an external secret manager,
+   and introduce a message broker or outbox pattern for reliable order and
+   inventory events.
+
+## Project status
+
+All planned modules are implemented:
+
+- [x] Repository and Git foundation
+- [x] User Service
+- [x] Product Service
+- [x] Order Service and service-to-service communication
+- [x] Automated tests and linting
+- [x] Dockerfiles and Docker Compose
+- [x] GitHub Actions CI
+- [x] GHCR image publishing
+- [x] Kubernetes manifests
+- [x] Automated kind deployment and smoke test
+- [x] Project documentation and polish
